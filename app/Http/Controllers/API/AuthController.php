@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,6 +21,7 @@ class AuthController extends Controller
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
+            'last_login_at' => now(),
             'password' => Hash::make($request->password),
         ]);
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -45,13 +47,16 @@ class AuthController extends Controller
         }
 
         $user = User::where('email', $request->email)->first();
-        $token = $user->createToken('auth_token')->plainTextToken;
-        return response()->json([
-            'status' => true,
-            'message' => 'login success',
-            'token' => $token,
-            'user' => $user,
-        ]);
+        if($user){
+            $user->update(['last_login_at' => now()]);
+            $token = $user->createToken('auth_token')->plainTextToken;
+            return response()->json([
+                'status' => true,
+                'message' => 'login success',
+                'token' => $token,
+                'user' => $user,
+            ]);
+        }
     }
     public function logout(Request $request)
     {
@@ -63,14 +68,9 @@ class AuthController extends Controller
     }
     public function profile(Request $request)
     {
-        // return response()->json([
-        //     'status' => true,
-        //     'user' => new UserResource(Auth::user()),
-        // ]);
-        // return response()->json([
-        //     'status' => true,
-        //     // 'user' => UserResource::collection(User::all()), //for multiple collection 
-        //     'user' => new UserResource(Auth::user()), // for single data
-        // ]);
+        return response()->json([
+            'status' => true,
+            'user' => new UserResource(Auth::user()),
+        ]);
     }
 }
